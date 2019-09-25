@@ -6,8 +6,10 @@ dependencies {
   implementation project(':ethereum:statetransition')
   implementation project(':data')
   implementation project(':data:adapter')
+  compile project(':jvm-libp2p')
+  compile project(':wittgenstein')
   implementation 'com.google.guava:guava'
-  compile files("../../libs/jvm-libp2p-minimal-0.0.1-SNAPSHOT.jar")
+//  compile files("../../libs/jvm-libp2p-minimal-0.0.1-SNAPSHOT.jar")
   compile "com.google.protobuf:protobuf-java"
   implementation 'io.vertx:vertx-core'
 

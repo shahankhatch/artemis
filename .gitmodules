@@ -5,3 +5,10 @@
 	path = ganache-cli
 	url = https://github.com/trufflesuite/ganache-cli.git
 
+[submodule "wittgenstein"]
+	path = wittgenstein
+	url = https://github.com/ConsenSys/wittgenstein.git
+[submodule "jvm-libp2p"]
+	path = jvm-libp2p
+	url = https://github.com/libp2p/jvm-libp2p.git
+	branch = feature/makesomenoise
