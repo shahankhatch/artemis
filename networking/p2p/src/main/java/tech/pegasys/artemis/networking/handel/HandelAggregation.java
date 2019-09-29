@@ -1,14 +1,21 @@
 package tech.pegasys.artemis.networking.handel;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.Objects;
+import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.Bytes32;
+import tech.pegasys.artemis.datastructures.util.SimpleOffsetSerializer;
 import tech.pegasys.artemis.util.SSZTypes.Bitlist;
+import tech.pegasys.artemis.util.SSZTypes.SSZContainer;
 import tech.pegasys.artemis.util.bls.BLSSignature;
+import tech.pegasys.artemis.util.sos.SimpleOffsetSerializable;
 
-public class HandelAggregation {
-  private Bytes32 hash;
-  private BLSSignature signature;
-  private Bitlist signers;
+public class HandelAggregation implements SimpleOffsetSerializable, SSZContainer {
+
+    private Bytes32 hash;
+    private BLSSignature signature;
+    private Bitlist signers;
 
   public HandelAggregation() {}
 
@@ -19,13 +26,13 @@ public class HandelAggregation {
     this.signers = signers;
   }
 
-  @Override
-  public int hashCode() {
+    @Override
+    public int hashCode() {
     return Objects.hash(hash, signature, signers);
   }
 
-  @Override
-  public boolean equals(Object obj) {
+    @Override
+    public boolean equals(Object obj) {
     if (Objects.isNull(obj)) {
       return false;
     }
@@ -44,27 +51,41 @@ public class HandelAggregation {
         && Objects.equals(this.getSigners(), other.getSigners());
   }
 
-  public Bytes32 getHash() {
+    public Bytes32 getHash() {
     return hash;
   }
 
-  public void setHash(Bytes32 hash) {
+    public void setHash(Bytes32 hash) {
     this.hash = hash;
   }
 
-  public BLSSignature getSignature() {
+    public BLSSignature getSignature() {
     return signature;
   }
 
-  public void setSignature(BLSSignature signature) {
+    public void setSignature(BLSSignature signature) {
     this.signature = signature;
   }
 
-  public Bitlist getSigners() {
+    public Bitlist getSigners() {
     return signers;
   }
 
-  public void setSigners(Bitlist signers) {
+    public void setSigners(Bitlist signers) {
     this.signers = signers;
+  }
+
+  @Override
+  public int getSSZFieldCount() {
+    return 3;
+  }
+
+  @Override
+  public List<Bytes> get_fixed_parts() {
+    return Arrays.asList(
+        getHash(),
+        SimpleOffsetSerializer.serialize(getSignature()),
+        getSigners().serialize()
+    );
   }
 }
