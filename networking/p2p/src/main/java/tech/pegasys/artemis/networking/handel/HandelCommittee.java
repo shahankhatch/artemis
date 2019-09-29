@@ -1,9 +1,14 @@
 package tech.pegasys.artemis.networking.handel;
 
 import io.libp2p.core.crypto.PubKey;
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.apache.tuweni.bytes.Bytes32;
 import tech.pegasys.artemis.datastructures.operations.Attestation;
 import tech.pegasys.artemis.util.SSZTypes.Bitlist;
@@ -17,6 +22,48 @@ public class HandelCommittee {
 
   private List<PubKey> allParticipants; // the elements will be sorted by PrivKey, will be made robust via seed later
 
+  private Map<PubKey, List<PubKey>> PV;
+
+  private void determineAllVPs(Bytes32 seed) {
+    PV = new HashMap<>();
+    allParticipants.stream().forEach(p -> {
+      PV.compute(p, (k, v) -> {
+        List<PubKey> ret = determineVP(allParticipants.indexOf(p), seed);
+        return ret;
+      });
+    });
+  }
+
+  /**
+   * Compute PVs of node at index {@code index} which excludes the element at the given index (a
+   * node cannot be in a priority list for itself).
+   *
+   * @param index The element index of participants.
+   * @param seed  The random seed by which to decide PVs (currently unused).
+   * @return The ordered list of PVs for the node at {@code index}.
+   */
+  private List<PubKey> determineVP(int index, Bytes32 seed) {
+    List<PubKey> parts = new ArrayList(allParticipants);
+    parts.remove(allParticipants.get(index)); // remove node from its own VP
+    Map<Bytes32, PubKey> intermediate = new HashMap();
+    parts.forEach(p -> {
+      // one way for deterministic sort is to XOR seed w/ pubkey first
+      Bytes32 k = seed.xor(Bytes32.wrap(
+          ByteBuffer.wrap(p.bytes())
+              .alignedSlice(32).array()
+      ));
+      intermediate.put(k, p);
+    });
+    List<Bytes32> collect = intermediate.keySet().stream().collect(Collectors.toList());
+    collect.sort((c, d) -> {
+      return compare(c.toArray(), d.toArray());
+    });
+    List<PubKey> ret = collect.stream().map(b -> {
+      return intermediate.get(b);
+    }).collect(Collectors.toList());
+    return ret;
+  }
+
   public HandelCommittee(PubKey myKey, Bytes32 seed,
       List<HandelParticipant> participants) {
     this.myKey = myKey;
@@ -28,6 +75,8 @@ public class HandelCommittee {
     allParticipants.sort((c, d) -> {
       return compare(c.bytes(), d.bytes());
     });
+
+    determineAllVPs(seed);
   }
 
   // get partition for us
@@ -37,7 +86,8 @@ public class HandelCommittee {
   }
 
   /**
-   Get partition of PubKeys at the given {@code level} in reference to a node at position {@code index} at level 0.
+   * Get partition of PubKeys at the given {@code level} in reference to a node at position {@code
+   * index} at level 0.
    */
   public List<PubKey> getPartition(int index, int level) {
     // check level is valid
@@ -48,7 +98,9 @@ public class HandelCommittee {
     if (index >= allParticipants.size()) {
       throw new IndexOutOfBoundsException("Cannot find partition for index:" + index);
     }
-    if (index > 0) Collections.rotate(allParticipants, -index);
+    if (index > 0) {
+      Collections.rotate(allParticipants, -index);
+    }
 
     // simply find index range, which is 2^(level-1) since it's a binary tree
     int rangeStart = (int) Math.pow(2, level - 1);
