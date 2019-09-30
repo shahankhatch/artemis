@@ -69,23 +69,19 @@ public class HandelMessageHandler implements Consumer<MessageApi> {
     if (msg.getTopics().contains(HANDEL_AGGREGATION_TOPIC)) {
 //      BeaconBlock block =
 //          SimpleOffsetSerializer.deserialize(Bytes.wrapByteBuf(msg.getData()), BeaconBlock.class);
-      eventBus.post(handelAggregation);
-    } else if (msg.getTopics().contains(ATTESTATIONS_TOPIC)) {
-      Attestation attestation =
-          SimpleOffsetSerializer.deserialize(Bytes.wrapByteBuf(msg.getData()), Attestation.class);
-      eventBus.post(attestation);
+//      eventBus.post(handelAggregation);
     }
   }
 
-  @Subscribe
-  public void onNewBlock(final BeaconBlock block) {
-    gossip(block, BLOCKS_TOPIC);
-  }
+//  @Subscribe
+//  public void onNewBlock(final BeaconBlock block) {
+//    gossip(block, BLOCKS_TOPIC);
+//  }
 
-  @Subscribe
-  public void onNewAttestation(final Attestation attestation) {
-    gossip(attestation, ATTESTATIONS_TOPIC);
-  }
+//  @Subscribe
+//  public void onNewAttestation(final Attestation attestation) {
+//    gossip(attestation, ATTESTATIONS_TOPIC);
+//  }
 
   private void gossip(final SimpleOffsetSerializable block, final Topic topic) {
     Bytes bytes = SimpleOffsetSerializer.serialize(block);

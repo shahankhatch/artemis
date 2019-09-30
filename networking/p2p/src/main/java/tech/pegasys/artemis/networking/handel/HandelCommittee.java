@@ -1,17 +1,23 @@
 package tech.pegasys.artemis.networking.handel;
 
 import io.libp2p.core.crypto.PubKey;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import org.apache.tuweni.bytes.Bytes32;
 import tech.pegasys.artemis.datastructures.operations.Attestation;
+import tech.pegasys.artemis.datastructures.operations.AttestationData;
+import tech.pegasys.artemis.datastructures.util.DataStructureUtil;
+import tech.pegasys.artemis.networking.handel.HandelAttestationFactory.Builder;
+import tech.pegasys.artemis.networking.handel.HandelAttestationFactory.BuiltConstructorClosure;
 import tech.pegasys.artemis.util.SSZTypes.Bitlist;
+import tech.pegasys.artemis.util.bls.BLSSignature;
 
 public class HandelCommittee {
 
@@ -19,10 +25,29 @@ public class HandelCommittee {
   private Bytes32 seed;
 
   private List<HandelParticipant> participants; // this is probably better as a map
-
-  private List<PubKey> allParticipants; // the elements will be sorted by PrivKey, will be made robust via seed later
+  private List<PubKey> allParticipants; // the elements will be sorted by PrivKey
 
   private Map<PubKey, List<PubKey>> PV;
+
+  public PubKey getMyKey() {
+    return myKey;
+  }
+
+  public Bytes32 getSeed() {
+    return seed;
+  }
+
+  public List<HandelParticipant> getParticipants() {
+    return participants;
+  }
+
+  public List<PubKey> getAllParticipants() {
+    return allParticipants;
+  }
+
+  public Map<PubKey, List<PubKey>> getPV() {
+    return PV;
+  }
 
   private void determineAllVPs(Bytes32 seed) {
     PV = new HashMap<>();
@@ -45,20 +70,17 @@ public class HandelCommittee {
   private List<PubKey> determineVP(int index, Bytes32 seed) {
     List<PubKey> parts = new ArrayList(allParticipants);
     parts.remove(allParticipants.get(index)); // remove node from its own VP
-    Map<Bytes32, PubKey> intermediate = new HashMap();
+    Map<Bytes32, PubKey> intermediate = new HashMap<>();
     parts.forEach(p -> {
       // one way for deterministic sort is to XOR seed w/ pubkey first
-      Bytes32 k = seed.xor(Bytes32.wrap(
-          ByteBuffer.wrap(p.bytes())
-              .alignedSlice(32).array()
-      ));
+      Bytes32 k = seed.xor(Bytes32.wrap(Arrays.copyOf(p.bytes(), 32)));
       intermediate.put(k, p);
     });
-    List<Bytes32> collect = intermediate.keySet().stream().collect(Collectors.toList());
-    collect.sort((c, d) -> {
+    List<Bytes32> keySet = new ArrayList<>(intermediate.keySet());
+    keySet.sort((c, d) -> {
       return compare(c.toArray(), d.toArray());
     });
-    List<PubKey> ret = collect.stream().map(b -> {
+    List<PubKey> ret = keySet.stream().map(b -> {
       return intermediate.get(b);
     }).collect(Collectors.toList());
     return ret;
@@ -68,15 +90,19 @@ public class HandelCommittee {
       List<HandelParticipant> participants) {
     this.myKey = myKey;
     this.seed = seed;
-    this.participants = participants;
+    this.participants = new ArrayList<>();
+    this.participants.addAll(participants);
 
+    orderParticipants(myKey, this.participants);
+    determineAllVPs(seed);
+  }
+
+  private void orderParticipants(PubKey myKey, List<HandelParticipant> participants) {
     allParticipants = participants.stream().map(e -> e.getKey()).collect(Collectors.toList());
     allParticipants.add(myKey);
     allParticipants.sort((c, d) -> {
       return compare(c.bytes(), d.bytes());
     });
-
-    determineAllVPs(seed);
   }
 
   // get partition for us
@@ -87,7 +113,7 @@ public class HandelCommittee {
 
   /**
    * Get partition of PubKeys at the given {@code level} in reference to a node at position {@code
-   * index} at level 0.
+   * index} at level 0. The current implementation is not symmetric across nodes at the same level.
    */
   public List<PubKey> getPartition(int index, int level) {
     // check level is valid
@@ -132,13 +158,18 @@ public class HandelCommittee {
     return left.length - right.length;
   }
 
-  // prepare an individual contribution to be disseminated to the overlay
+  BlockingQueue<Attestation> unprocessed = new LinkedBlockingQueue<>();
+
+  // receive a contribution at a given height
+  // also requires index of sender (for looking up their pubkey)
   public void attestation(long height, Attestation attestation) {
     Bitlist bl = new Bitlist(allParticipants.size(), allParticipants.size());
     bl.setBit(allParticipants.indexOf(myKey));
 
     HandelAggregation agg = new HandelAggregation(attestation.hash_tree_root(),
         attestation.getAggregate_signature(), bl);
+//    unprocessed.add(agg);
   }
+
 
 }
