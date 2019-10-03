@@ -27,8 +27,8 @@ import io.libp2p.etc.types.ByteArrayExtKt;
 import io.libp2p.mux.mplex.MplexStreamMuxer;
 import io.libp2p.protocol.Identify;
 import io.libp2p.protocol.Ping;
-import io.libp2p.pubsub.gossip.Gossip;
 import io.libp2p.security.noise.NoiseXXSecureChannel;
+import io.libp2p.security.secio.SecIoSecureChannel;
 import io.libp2p.transport.tcp.TcpTransport;
 import io.netty.handler.logging.LogLevel;
 import java.util.concurrent.CompletableFuture;
@@ -36,7 +36,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import org.apache.logging.log4j.Level;
 import tech.pegasys.artemis.networking.p2p.api.P2PNetwork;
-import tech.pegasys.artemis.networking.p2p.jvmlibp2p.GossipMessageHandler;
 import tech.pegasys.artemis.networking.p2p.jvmlibp2p.JvmLibp2pConfig;
 import tech.pegasys.artemis.networking.p2p.jvmlibp2p.Libp2pPeerManager;
 import tech.pegasys.artemis.util.alogger.ALogger;
@@ -60,8 +59,6 @@ public class HandelP2PNetwork implements P2PNetwork {
     scheduler =
         Executors.newSingleThreadScheduledExecutor(
             new ThreadFactoryBuilder().setDaemon(true).setNameFormat("libp2p-%d").build());
-    Gossip gossip = new Gossip();
-    GossipMessageHandler.init(gossip, privKey, eventBus);
     peerManager = new Libp2pPeerManager(scheduler);
 
     host =
@@ -70,6 +67,7 @@ public class HandelP2PNetwork implements P2PNetwork {
               b.getIdentity().setFactory(() -> privKey);
               b.getTransports().add(TcpTransport::new);
               b.getSecureChannels().add(NoiseXXSecureChannel::new);
+//              b.getSecureChannels().add(SecIoSecureChannel::new);
               b.getMuxers().add(MplexStreamMuxer::new);
               b.getNetwork()
                   .listen(
@@ -91,12 +89,10 @@ public class HandelP2PNetwork implements P2PNetwork {
                               new Multiaddr("/ip4/127.0.0.1/tcp/" + config.getAdvertisedPort())
                                   .getBytes()))
                       .addProtocols(ping.getAnnounce())
-                      .addProtocols(gossip.getAnnounce())
                       .build();
 
               b.getProtocols().add(ping);
               b.getProtocols().add(new Identify(identifyMsg));
-              b.getProtocols().add(gossip);
               //              b.getProtocols().addAll(peerManager.rpcMethods.all());
 
               if (config.isLogWireCipher()) {
@@ -112,6 +108,9 @@ public class HandelP2PNetwork implements P2PNetwork {
               b.getConnectionHandlers().add(peerManager);
             });
   }
+
+  public Host getHost() { return host; }
+  public Libp2pPeerManager getPeerManager() { return peerManager; }
 
   @Override
   public void run() {
