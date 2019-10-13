@@ -50,6 +50,11 @@ public class HandelP2PNetwork implements P2PNetwork {
   private final ScheduledExecutorService scheduler;
   private final Libp2pPeerManager peerManager;
 
+  public JvmLibp2pConfig getConfig() {
+    return config;
+  }
+
+
   public HandelP2PNetwork(final JvmLibp2pConfig config, final EventBus eventBus) {
     this.privKey =
         config
@@ -132,6 +137,11 @@ public class HandelP2PNetwork implements P2PNetwork {
     }
   }
 
+  /**
+   * Convenience method to connect to the given peer at the provided multiaddr.
+   * @param peer Peer {@code Multiaddr} to connect to.
+   * @return
+   */
   @Override
   public CompletableFuture<?> connect(final String peer) {
     return peerManager.connect(new Multiaddr(peer), host.getNetwork());
