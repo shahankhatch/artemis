@@ -9,6 +9,8 @@ import io.libp2p.core.crypto.KEY_TYPE;
 import io.libp2p.core.crypto.KeyKt;
 import io.libp2p.core.crypto.PrivKey;
 import io.libp2p.core.multiformats.Multiaddr;
+import io.libp2p.core.multistream.Multistream;
+import io.libp2p.protocol.Ping;
 import io.libp2p.protocol.PingController;
 import io.netty.util.concurrent.FailedFuture;
 import java.util.ArrayList;
@@ -186,7 +188,7 @@ public class HandelP2PNetworkTest {
     Configurator.setLevel("testHandel50Nodes", Level.DEBUG);
     int startPort = 2455;
 
-    int numNodes = 10;
+    int numNodes = 50;
 
     // prepare node configurations
     ArrayList<HandelP2PNetwork> nodes = new ArrayList<>();
@@ -210,8 +212,8 @@ public class HandelP2PNetworkTest {
     nodes.remove(0);
     handelServer.getHost()
         .start().thenAccept(i -> {
-      testLogger.debug("Node 0 (host node) started on port "+startPort);
-    }).get(30, TimeUnit.SECONDS);
+      testLogger.debug("Node 0 (host node) started on port " + startPort);
+    }).get(45, TimeUnit.SECONDS);
 
 //    Executor executor = Executors.newFixedThreadPool(10);
 
@@ -228,29 +230,40 @@ public class HandelP2PNetworkTest {
     CompletableFuture<Void> voidCompletableFuture = CompletableFuture
         .allOf(collect.toArray(new CompletableFuture[0]));
 
+    voidCompletableFuture.join();
 
-    // connect from peers to host node
-    voidCompletableFuture.handle((a, b) -> {
-      String peer =
-          "/ip4/127.0.0.1/tcp/" + handelServer.getConfig().getListenPort() + "/p2p/"
-              + handelServer.getHost().getPeerId();
+    String peer =
+        "/ip4/127.0.0.1/tcp/" + handelServer.getConfig().getListenPort() + "/p2p/"
+            + handelServer.getHost().getPeerId();
 
+    nodes.stream().forEach(n -> {
+      testLogger.debug("Connecting from:" + n.getConfig().getListenPort());
       try {
-        return CompletableFuture.allOf(nodes.stream().map(n -> {
-          testLogger.debug("Connecting from:"+n.getConfig().getListenPort());
-          return n.connect(peer).whenComplete((ab, bc) -> {
-            testLogger.debug(n.getConfig().getListenPort() + " connected to central peer.");
-          });
-        }).collect(Collectors.toList()).toArray(new CompletableFuture[0]))
-            .whenCompleteAsync((aa, bb) -> {
-            }).get();
+        n
+        .getHost().getNetwork().connect(handelServer.getHost().getPeerId(), new Multiaddr("/ip4/127.0.0.1/tcp/" + handelServer.getConfig().getListenPort()))
+  //          .connect(peer)
+            .handle((aaa,bbb) -> {
+              testLogger.debug("Connected successfully:"+aaa);
+              return CompletableFuture.completedFuture(aaa);
+            })
+            .thenApply(aa -> {
+              return CompletableFuture.completedFuture(aa);
+            })
+//            .thenApply(it -> it.getMuxerSession().createStream(
+//            Multistream.create(new Ping()).toStreamHandler()))
+            .get(5, TimeUnit.SECONDS);
       } catch (InterruptedException e) {
         e.printStackTrace();
       } catch (ExecutionException e) {
         e.printStackTrace();
+      } catch (TimeoutException e) {
+        e.printStackTrace();
       }
-      return null;
-    });
+//      thenAccept(ab -> {
+//        testLogger.debug(":" + n.getConfig().getListenPort() + " connected to central peer.");
+      });
+//    });
+
 
   }
 
