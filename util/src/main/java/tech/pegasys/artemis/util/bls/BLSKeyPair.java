@@ -19,6 +19,7 @@ public class BLSKeyPair {
 
   private BLSPublicKey publicKey;
   private BLSSecretKey secretKey;
+  private KeyPair keyPair;
 
   public static BLSKeyPair random() {
     return new BLSKeyPair(KeyPair.random());
@@ -31,6 +32,7 @@ public class BLSKeyPair {
   public BLSKeyPair(KeyPair keyPair) {
     this.publicKey = new BLSPublicKey(keyPair.publicKey());
     this.secretKey = new BLSSecretKey(keyPair.secretKey());
+    this.keyPair = keyPair;
   }
 
   public BLSPublicKey getPublicKey() {
@@ -40,4 +42,6 @@ public class BLSKeyPair {
   public BLSSecretKey getSecretKey() {
     return secretKey;
   }
+
+  public KeyPair getKeyPair() { return keyPair; }
 }

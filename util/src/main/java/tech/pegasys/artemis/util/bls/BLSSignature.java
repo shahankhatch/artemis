@@ -80,18 +80,6 @@ public class BLSSignature implements SimpleOffsetSerializable {
     return BLSSignature.fromBytes(Bytes.wrap(new byte[BLS_SIGNATURE_SIZE]));
   }
 
-  /**
-   * Aggregates a list of signatures into a single signature using BLS magic.
-   *
-   * @param signatures the list of signatures to be aggregated
-   * @return the aggregated signature
-   */
-  static BLSSignature aggregate(List<BLSSignature> signatures) {
-    List<Signature> signatureObjects =
-        signatures.stream().map(x -> x.signature).collect(Collectors.toList());
-    return new BLSSignature(Signature.aggregate(signatureObjects));
-  }
-
   @Override
   public int getSSZFieldCount() {
     return SSZ_FIELD_COUNT;

@@ -12,12 +12,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.stream.Collectors;
 import org.apache.tuweni.bytes.Bytes32;
 import tech.pegasys.artemis.datastructures.operations.Attestation;
-import tech.pegasys.artemis.datastructures.operations.AttestationData;
-import tech.pegasys.artemis.datastructures.util.DataStructureUtil;
-import tech.pegasys.artemis.networking.handel.HandelAttestationFactory.Builder;
-import tech.pegasys.artemis.networking.handel.HandelAttestationFactory.BuiltConstructorClosure;
 import tech.pegasys.artemis.util.SSZTypes.Bitlist;
-import tech.pegasys.artemis.util.bls.BLSSignature;
 
 public class HandelCommittee {
 
@@ -25,9 +20,10 @@ public class HandelCommittee {
   private Bytes32 seed;
 
   private List<HandelParticipant> participants; // this is probably better as a map
-  private List<PubKey> allParticipants; // the elements will be sorted by PrivKey
+  private List<PubKey> sortedParticipantKeys; // elements sorted by PubKey
 
-  private Map<PubKey, List<PubKey>> PV;
+  private Map<PubKey, List<PubKey>> PV; // priority vector
+
 
   public PubKey getMyKey() {
     return myKey;
@@ -37,12 +33,19 @@ public class HandelCommittee {
     return seed;
   }
 
+  /**
+   * Access to participant info
+   * @return the backing list of participants
+   */
   public List<HandelParticipant> getParticipants() {
     return participants;
   }
 
-  public List<PubKey> getAllParticipants() {
-    return allParticipants;
+  /**
+   * @return the list of sorted participant pubkeys, e.g., for deterministic id
+   */
+  public List<PubKey> getSortedParticipantKeys() {
+    return sortedParticipantKeys;
   }
 
   public Map<PubKey, List<PubKey>> getPV() {
@@ -51,9 +54,9 @@ public class HandelCommittee {
 
   private void determineAllVPs(Bytes32 seed) {
     PV = new HashMap<>();
-    allParticipants.stream().forEach(p -> {
+    sortedParticipantKeys.stream().forEach(p -> {
       PV.compute(p, (k, v) -> {
-        List<PubKey> ret = determineVP(allParticipants.indexOf(p), seed);
+        List<PubKey> ret = determineVP(sortedParticipantKeys.indexOf(p), seed);
         return ret;
       });
     });
@@ -68,8 +71,8 @@ public class HandelCommittee {
    * @return The ordered list of PVs for the node at {@code index}.
    */
   private List<PubKey> determineVP(int index, Bytes32 seed) {
-    List<PubKey> parts = new ArrayList(allParticipants);
-    parts.remove(allParticipants.get(index)); // remove node from its own VP
+    List<PubKey> parts = new ArrayList(sortedParticipantKeys);
+    parts.remove(sortedParticipantKeys.get(index)); // remove node from its own VP
     Map<Bytes32, PubKey> intermediate = new HashMap<>();
     parts.forEach(p -> {
       // one way for deterministic sort is to XOR seed w/ pubkey first
@@ -98,16 +101,16 @@ public class HandelCommittee {
   }
 
   private void orderParticipants(PubKey myKey, List<HandelParticipant> participants) {
-    allParticipants = participants.stream().map(e -> e.getKey()).collect(Collectors.toList());
-    allParticipants.add(myKey);
-    allParticipants.sort((c, d) -> {
+    sortedParticipantKeys = participants.stream().map(e -> e.getKey()).collect(Collectors.toList());
+    sortedParticipantKeys.add(myKey);
+    sortedParticipantKeys.sort((c, d) -> {
       return compare(c.bytes(), d.bytes());
     });
   }
 
   // get partition for us
   public List<PubKey> getPartition(int level) {
-    Collections.rotate(allParticipants, -allParticipants.indexOf(myKey));
+    Collections.rotate(sortedParticipantKeys, -sortedParticipantKeys.indexOf(myKey));
     return getPartition(0, level);
   }
 
@@ -121,24 +124,24 @@ public class HandelCommittee {
       throw new IndexOutOfBoundsException("No partition for level 0 exists (it is us).");
     }
     // check index is in range
-    if (index >= allParticipants.size()) {
+    if (index >= sortedParticipantKeys.size()) {
       throw new IndexOutOfBoundsException("Cannot find partition for index:" + index);
     }
     if (index > 0) {
-      Collections.rotate(allParticipants, -index);
+      Collections.rotate(sortedParticipantKeys, -index);
     }
 
     // simply find index range, which is 2^(level-1) since it's a binary tree
     int rangeStart = (int) Math.pow(2, level - 1);
     int rangeEnd = (int) Math.pow(2, level);
-    if (rangeStart >= allParticipants.size()) {
+    if (rangeStart >= sortedParticipantKeys.size()) {
       throw new IndexOutOfBoundsException("No partition exists for level:" + level);
     }
     List<PubKey> ret;
-    if (rangeEnd < allParticipants.size()) {
-      ret = allParticipants.subList(rangeStart, rangeEnd);
+    if (rangeEnd < sortedParticipantKeys.size()) {
+      ret = sortedParticipantKeys.subList(rangeStart, rangeEnd);
     } else {
-      ret = allParticipants.subList(rangeStart, allParticipants.size() - 1);
+      ret = sortedParticipantKeys.subList(rangeStart, sortedParticipantKeys.size() - 1);
     }
     if (ret.size() == 0) {
       throw new IndexOutOfBoundsException(
@@ -162,12 +165,13 @@ public class HandelCommittee {
 
   // receive a contribution at a given height
   // also requires index of sender (for looking up their pubkey)
+  // TODO: there is a null in the constructor for now, this is buggy
   public void attestation(long height, Attestation attestation) {
-    Bitlist bl = new Bitlist(allParticipants.size(), allParticipants.size());
-    bl.setBit(allParticipants.indexOf(myKey));
+    Bitlist bl = new Bitlist(sortedParticipantKeys.size(), sortedParticipantKeys.size());
+    bl.setBit(sortedParticipantKeys.indexOf(myKey));
 
     HandelAggregation agg = new HandelAggregation(attestation.hash_tree_root(),
-        attestation.getAggregate_signature(), bl);
+        attestation.getAggregate_signature(), bl, null);
 //    unprocessed.add(agg);
   }
 

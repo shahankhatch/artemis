@@ -8,7 +8,7 @@ import tech.pegasys.artemis.datastructures.operations.Attestation;
 public class HandelAttestationFactory {
 
   /**
-   * Create attestations using traditional constructor for its components. Currently, the builder
+   * Create attestations using traditional constructor for its components.
    *
    * @param t      type of Attestation to return
    * @param args   argument types for the constructor
@@ -37,8 +37,7 @@ public class HandelAttestationFactory {
   }
 
   /**
-   * Create attestations using builder for constructing each of its components. Currently, the
-   * builder
+   * Create attestations using builder for constructing each of its components.
    *
    * @param t      type of Attestation to return
    * @param args
@@ -66,10 +65,8 @@ public class HandelAttestationFactory {
 
   /**
    * Build a constructor for attestations that allow pre-defining the builders for some components.
-   * Parameters passed as null form the parameters to the closure of the constructor.
-   * i.e., buildConstructorClosure(
-   *              new Class[]{String.class, Integer.class},
-   *              new Builder{}
+   * Parameters passed as null form the parameters to the closure of the constructor. i.e.,
+   * buildConstructorClosure( new Class[]{String.class, Integer.class}, new Builder{}
    *
    * @param t
    * @param args
