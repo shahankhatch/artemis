@@ -11,11 +11,10 @@
  * specific language governing permissions and limitations under the License.
  */
 
-package tech.pegasys.artemis.networking.handel;
+package tech.pegasys.artemis.networking.handel.libp2p;
 
 import com.google.common.eventbus.EventBus;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import identify.pb.IdentifyOuterClass;
 import io.libp2p.core.Connection;
 import io.libp2p.core.Host;
 import io.libp2p.core.PeerId;
@@ -24,9 +23,7 @@ import io.libp2p.core.crypto.KeyKt;
 import io.libp2p.core.crypto.PrivKey;
 import io.libp2p.core.dsl.BuildersJKt;
 import io.libp2p.core.multiformats.Multiaddr;
-import io.libp2p.etc.types.ByteArrayExtKt;
 import io.libp2p.mux.mplex.MplexStreamMuxer;
-import io.libp2p.protocol.Identify;
 import io.libp2p.protocol.Ping;
 import io.libp2p.security.noise.NoiseXXSecureChannel;
 import io.libp2p.transport.tcp.TcpTransport;
@@ -35,11 +32,12 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import org.apache.logging.log4j.Level;
+import tech.pegasys.artemis.networking.handel.libp2p.HandelBinding;
+import tech.pegasys.artemis.networking.handel.libp2p.HandelProtocol;
 import tech.pegasys.artemis.networking.p2p.api.P2PNetwork;
 import tech.pegasys.artemis.networking.p2p.jvmlibp2p.JvmLibp2pConfig;
 import tech.pegasys.artemis.networking.p2p.jvmlibp2p.Libp2pPeerManager;
 import tech.pegasys.artemis.util.alogger.ALogger;
-import tech.pegasys.artemis.util.cli.VersionProvider;
 
 public class HandelP2PNetwork implements P2PNetwork {
 

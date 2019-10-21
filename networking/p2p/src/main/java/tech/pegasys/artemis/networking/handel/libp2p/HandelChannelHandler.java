@@ -1,4 +1,4 @@
-package tech.pegasys.artemis.networking.handel;
+package tech.pegasys.artemis.networking.handel.libp2p;
 
 import io.libp2p.core.Libp2pException;
 import io.libp2p.etc.types.ByteArrayExtKt;

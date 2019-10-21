@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.apache.tuweni.bytes.Bytes32;
+import tech.pegasys.artemis.networking.handel.libp2p.HandelP2PNetwork;
 import tech.pegasys.artemis.util.bls.BLSKeyPair;
 import tech.pegasys.artemis.util.mikuli.KeyPair;
 

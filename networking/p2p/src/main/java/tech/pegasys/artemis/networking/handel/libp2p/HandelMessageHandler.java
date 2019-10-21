@@ -11,10 +11,9 @@
  * specific language governing permissions and limitations under the License.
  */
 
-package tech.pegasys.artemis.networking.handel;
+package tech.pegasys.artemis.networking.handel.libp2p;
 
 import com.google.common.eventbus.EventBus;
-import com.google.common.eventbus.Subscribe;
 import io.libp2p.core.crypto.PrivKey;
 import io.libp2p.core.pubsub.MessageApi;
 import io.libp2p.core.pubsub.PubsubPublisherApi;
@@ -28,8 +27,6 @@ import java.util.Random;
 import java.util.Set;
 import java.util.function.Consumer;
 import org.apache.tuweni.bytes.Bytes;
-import tech.pegasys.artemis.datastructures.blocks.BeaconBlock;
-import tech.pegasys.artemis.datastructures.operations.Attestation;
 import tech.pegasys.artemis.datastructures.util.SimpleOffsetSerializer;
 import tech.pegasys.artemis.util.sos.SimpleOffsetSerializable;
 

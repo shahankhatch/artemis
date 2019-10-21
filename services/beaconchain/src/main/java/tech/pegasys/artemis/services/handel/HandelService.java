@@ -5,7 +5,7 @@ import io.libp2p.core.crypto.KeyKt;
 import io.libp2p.core.crypto.PrivKey;
 import org.apache.tuweni.bytes.Bytes;
 import tech.pegasys.artemis.datastructures.Constants;
-import tech.pegasys.artemis.networking.handel.HandelP2PNetwork;
+import tech.pegasys.artemis.networking.handel.libp2p.HandelP2PNetwork;
 import tech.pegasys.artemis.networking.p2p.api.P2PNetwork;
 import tech.pegasys.artemis.networking.p2p.jvmlibp2p.JvmLibp2pConfig;
 import tech.pegasys.artemis.service.serviceutils.ServiceConfig;
