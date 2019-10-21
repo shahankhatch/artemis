@@ -16,6 +16,7 @@ package tech.pegasys.artemis.networking.handel;
 import com.google.common.eventbus.EventBus;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import identify.pb.IdentifyOuterClass;
+import io.libp2p.core.Connection;
 import io.libp2p.core.Host;
 import io.libp2p.core.PeerId;
 import io.libp2p.core.crypto.KEY_TYPE;
@@ -28,7 +29,6 @@ import io.libp2p.mux.mplex.MplexStreamMuxer;
 import io.libp2p.protocol.Identify;
 import io.libp2p.protocol.Ping;
 import io.libp2p.security.noise.NoiseXXSecureChannel;
-import io.libp2p.security.secio.SecIoSecureChannel;
 import io.libp2p.transport.tcp.TcpTransport;
 import io.netty.handler.logging.LogLevel;
 import java.util.concurrent.CompletableFuture;
@@ -42,6 +42,7 @@ import tech.pegasys.artemis.util.alogger.ALogger;
 import tech.pegasys.artemis.util.cli.VersionProvider;
 
 public class HandelP2PNetwork implements P2PNetwork {
+
   private static final ALogger STDOUT = new ALogger("stdout");
 
   private final PrivKey privKey;
@@ -49,6 +50,12 @@ public class HandelP2PNetwork implements P2PNetwork {
   private final Host host;
   private final ScheduledExecutorService scheduler;
   private final Libp2pPeerManager peerManager;
+
+  private Connection connection;
+
+  public Connection getConnection() {
+    return connection;
+  }
 
   public JvmLibp2pConfig getConfig() {
     return config;
@@ -72,33 +79,13 @@ public class HandelP2PNetwork implements P2PNetwork {
               b.getIdentity().setFactory(() -> privKey);
               b.getTransports().add(TcpTransport::new);
               b.getSecureChannels().add(NoiseXXSecureChannel::new);
-//              b.getSecureChannels().add(SecIoSecureChannel::new);
               b.getMuxers().add(MplexStreamMuxer::new);
               b.getNetwork()
                   .listen(
                       "/ip4/" + config.getNetworkInterface() + "/tcp/" + config.getListenPort());
 
-              final Ping ping = new Ping();
-              IdentifyOuterClass.Identify identifyMsg =
-                  IdentifyOuterClass.Identify.newBuilder()
-                      //                      .setProtocolVersion("ipfs/0.1.0")
-                      .setAgentVersion(
-                          VersionProvider.CLIENT_IDENTITY + "/" + VersionProvider.VERSION)
-                      .setPublicKey(ByteArrayExtKt.toProtobuf(privKey.publicKey().bytes()))
-                      .addListenAddrs(
-                          ByteArrayExtKt.toProtobuf(
-                              new Multiaddr("/ip4/127.0.0.1/tcp/" + config.getAdvertisedPort())
-                                  .getBytes()))
-                      .setObservedAddr(
-                          ByteArrayExtKt.toProtobuf( // TODO: Report external IP?
-                              new Multiaddr("/ip4/127.0.0.1/tcp/" + config.getAdvertisedPort())
-                                  .getBytes()))
-                      .addProtocols(ping.getAnnounce())
-                      .build();
-
-              b.getProtocols().add(ping);
-              b.getProtocols().add(new Identify(identifyMsg));
-              //              b.getProtocols().addAll(peerManager.rpcMethods.all());
+              b.getProtocols().add(new Ping());
+              b.getProtocols().add(new HandelBinding(new HandelProtocol()));
 
               if (config.isLogWireCipher()) {
                 b.getDebug().getBeforeSecureHandler().setLogger(LogLevel.DEBUG, "wire.ciphered");
@@ -114,8 +101,13 @@ public class HandelP2PNetwork implements P2PNetwork {
             });
   }
 
-  public Host getHost() { return host; }
-  public Libp2pPeerManager getPeerManager() { return peerManager; }
+  public Host getHost() {
+    return host;
+  }
+
+  public Libp2pPeerManager getPeerManager() {
+    return peerManager;
+  }
 
   @Override
   public void run() {
@@ -139,6 +131,7 @@ public class HandelP2PNetwork implements P2PNetwork {
 
   /**
    * Convenience method to connect to the given peer at the provided multiaddr.
+   *
    * @param peer Peer {@code Multiaddr} to connect to.
    * @return
    */
@@ -151,5 +144,9 @@ public class HandelP2PNetwork implements P2PNetwork {
   public void stop() {
     host.stop();
     scheduler.shutdownNow();
+  }
+
+  public void setConnection(Connection connection) {
+    this.connection = connection;
   }
 }
