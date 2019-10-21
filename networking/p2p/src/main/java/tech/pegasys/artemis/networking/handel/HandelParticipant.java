@@ -6,16 +6,23 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.apache.tuweni.bytes.Bytes32;
+import tech.pegasys.artemis.util.bls.BLSKeyPair;
 import tech.pegasys.artemis.util.mikuli.KeyPair;
 
 public class HandelParticipant {
-  private long ipaddress; // TODO this is to be changed to a String or other struct
+  private HandelP2PNetwork network; // network on which this participant is executing - aka eth2
 
-  private PubKey key; // validator's identity key
-  private KeyPair kp; // keypair for bls signatures
+  private PubKey key; // validator's libp2p identity key
+  private KeyPair kp; // keypair for bls signatures, mikuli type
+  private BLSKeyPair blsKeyPair; // bocu packaged type for keypair
 
   public List<HandelAggregation> getIncomingAggregations() {
     return incomingAggregations;
+  }
+
+  public void setIncomingAggregations(
+      List<HandelAggregation> incomingAggregations) {
+    this.incomingAggregations = incomingAggregations;
   }
 
   private List<HandelAggregation> incomingAggregations = new ArrayList<>(); // queue of incoming aggregations
@@ -27,17 +34,8 @@ public class HandelParticipant {
   private Map<Bytes32, HandelAggregation> mapHashToAggr = new HashMap<>();
 
 
-  public HandelParticipant(long ipaddress, PubKey key) {
-    this.ipaddress = ipaddress;
+  public HandelParticipant(PubKey key) {
     this.key = key;
-  }
-
-  public long getIpaddress() {
-    return ipaddress;
-  }
-
-  public void setIpaddress(long ipaddress) {
-    this.ipaddress = ipaddress;
   }
 
   public PubKey getKey() {
@@ -54,5 +52,21 @@ public class HandelParticipant {
 
   public void setKp(KeyPair kp) {
     this.kp = kp;
+  }
+
+  public BLSKeyPair getBlsKeyPair() {
+    return blsKeyPair;
+  }
+
+  public void setBlsKeyPair(BLSKeyPair blsKeyPair) {
+    this.blsKeyPair = blsKeyPair;
+  }
+
+  public HandelP2PNetwork getNetwork() {
+    return network;
+  }
+
+  public void setNetwork(HandelP2PNetwork network) {
+    this.network = network;
   }
 }
