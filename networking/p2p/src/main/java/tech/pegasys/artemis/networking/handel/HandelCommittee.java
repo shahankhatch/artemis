@@ -13,6 +13,7 @@ import java.util.stream.Collectors;
 import org.apache.tuweni.bytes.Bytes32;
 import tech.pegasys.artemis.datastructures.operations.Attestation;
 import tech.pegasys.artemis.util.SSZTypes.Bitlist;
+import tech.pegasys.artemis.util.bls.BLSPublicKey;
 
 public class HandelCommittee {
 
@@ -20,7 +21,10 @@ public class HandelCommittee {
   private Bytes32 seed;
 
   private List<HandelParticipant> participants; // this is probably better as a map
+
+  // TODO: lambda-build these
   private List<PubKey> sortedParticipantKeys; // elements sorted by PubKey
+  private List<BLSPublicKey> sortedBLSKeys; // elements sorted by BLSKey
 
   private Map<PubKey, List<PubKey>> PV; // priority vector
 
@@ -35,6 +39,7 @@ public class HandelCommittee {
 
   /**
    * Access to participant info
+   *
    * @return the backing list of participants
    */
   public List<HandelParticipant> getParticipants() {
@@ -56,7 +61,7 @@ public class HandelCommittee {
     PV = new HashMap<>();
     sortedParticipantKeys.stream().forEach(p -> {
       PV.compute(p, (k, v) -> {
-        List<PubKey> ret = determineVP(sortedParticipantKeys.indexOf(p), seed);
+        List<PubKey> ret = determineVPByPubKey(sortedParticipantKeys.indexOf(p), seed);
         return ret;
       });
     });
@@ -70,23 +75,33 @@ public class HandelCommittee {
    * @param seed  The random seed by which to decide PVs (currently unused).
    * @return The ordered list of PVs for the node at {@code index}.
    */
-  private List<PubKey> determineVP(int index, Bytes32 seed) {
-    List<PubKey> parts = new ArrayList(sortedParticipantKeys);
-    parts.remove(sortedParticipantKeys.get(index)); // remove node from its own VP
-    Map<Bytes32, PubKey> intermediate = new HashMap<>();
-    parts.forEach(p -> {
-      // one way for deterministic sort is to XOR seed w/ pubkey first
-      Bytes32 k = seed.xor(Bytes32.wrap(Arrays.copyOf(p.bytes(), 32)));
-      intermediate.put(k, p);
+  private List<PubKey> determineVPByPubKey(int index, Bytes32 seed) {
+    ArrayList<PubKey> parts = new ArrayList<>(sortedParticipantKeys);
+    parts.remove(index); // remove node from its own VP
+    Arrays.sort(parts.toArray(new PubKey[0]), (left, right) -> {
+      Bytes32 leftB = seed.xor(Bytes32.wrap(Arrays.copyOf(left.bytes(), 32)));
+      Bytes32 rightB = seed.xor(Bytes32.wrap(Arrays.copyOf(right.bytes(), 32)));
+      return compare(leftB.toArray(), rightB.toArray());
     });
-    List<Bytes32> keySet = new ArrayList<>(intermediate.keySet());
-    keySet.sort((c, d) -> {
-      return compare(c.toArray(), d.toArray());
+    return parts;
+  }
+
+  /**
+   * Compute PVs of node at index {@code index} which excludes the element at the given index (a
+   * node cannot be in a priority list for itself).
+   *
+   * @param participants Participant list which is populated from {@code HandelCommittee}
+   * @param seed  Random seed by which to decide PVs (currently unused).
+   * @return Ordered list of PVs for the node.
+   */
+  public static List<HandelParticipant> determineVPByBLSPubKey(List<HandelParticipant> participants, Bytes32 seed) {
+    ArrayList<HandelParticipant> parts = new ArrayList<>(participants);
+    Arrays.sort(parts.toArray(new HandelParticipant[0]), (left, right) -> {
+      Bytes32 leftB = seed.xor(Bytes32.wrap(Arrays.copyOf(left.getBlsKeyPair().getPublicKey().toBytes().toArray(), 32)));
+      Bytes32 rightB = seed.xor(Bytes32.wrap(Arrays.copyOf(right.getBlsKeyPair().getPublicKey().toBytes().toArray(), 32)));
+      return compare(leftB.toArray(), rightB.toArray());
     });
-    List<PubKey> ret = keySet.stream().map(b -> {
-      return intermediate.get(b);
-    }).collect(Collectors.toList());
-    return ret;
+    return parts;
   }
 
   public HandelCommittee(PubKey myKey, Bytes32 seed,
@@ -150,7 +165,7 @@ public class HandelCommittee {
     return ret;
   }
 
-  public int compare(byte[] left, byte[] right) {
+  public static int compare(byte[] left, byte[] right) {
     for (int i = 0, j = 0; i < left.length && j < right.length; i++, j++) {
       int a = (left[i] & 0xff);
       int b = (right[j] & 0xff);
@@ -160,8 +175,6 @@ public class HandelCommittee {
     }
     return left.length - right.length;
   }
-
-  BlockingQueue<Attestation> unprocessed = new LinkedBlockingQueue<>();
 
   // receive a contribution at a given height
   // also requires index of sender (for looking up their pubkey)

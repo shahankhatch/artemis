@@ -47,7 +47,7 @@ public class HandelCommitteeTest {
     List<HandelParticipant> participants = new ArrayList<>();
     for (int i = 0; i < numParticipants; i++) {
       Pair<PrivKey, PubKey> pair = KeyKt.generateKeyPair(KEY_TYPE.SECP256K1);
-      participants.add(new HandelParticipant(i, pair.component2()));
+      participants.add(new HandelParticipant(pair.component2()));
     }
     Pair<PrivKey, PubKey> mykey = KeyKt.generateKeyPair(KEY_TYPE.SECP256K1);
 
@@ -66,7 +66,7 @@ public class HandelCommitteeTest {
     List<HandelParticipant> participants = new ArrayList<>();
     for (int i = 0; i < numParticipants; i++) {
       Pair<PrivKey, PubKey> pair = KeyKt.generateKeyPair(KEY_TYPE.SECP256K1);
-      participants.add(new HandelParticipant(i, pair.component2()));
+      participants.add(new HandelParticipant(pair.component2()));
     }
     Pair<PrivKey, PubKey> pair = KeyKt.generateKeyPair(KEY_TYPE.SECP256K1);
 
