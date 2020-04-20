@@ -42,6 +42,13 @@ public class FuzzUtil {
   private void doblock() throws BlockProcessingException {
     final BeaconState beaconState = new BeaconState();
     final Attestation attestation = DataStructureUtil.randomAttestation(0);
+
+    try {
+      BeaconState beaconState1 = testAttestation(beaconState, attestation);
+      System.out.println("beaconstate1:" + beaconState1.getSlot());
+    } catch (Exception e) {
+      System.err.println("doblock:");
+    }
     attestation.setData(attestation.getData().withIndex(UnsignedLong.ZERO));
 //    PendingAttestation pendingAttestation = DataStructureUtil.randomPendingAttestation(0);
 
@@ -74,7 +81,23 @@ public class FuzzUtil {
   }
 
   public static byte[] testAttestationRetState(final byte[] beaconstate, final byte[] attestation) {
+    final Bytes inData = Bytes.wrap(beaconstate);
+    try {
+      final BeaconStateWithCache state =
+          BeaconStateWithCache.fromBeaconState(
+              SimpleOffsetSerializer.deserialize(inData, BeaconState.class));
+      System.out.println("testAttestationRetState_slot:" + state.getSlot());
+      final BeaconState result = null;
+      SimpleOffsetSerializer.serialize(result).toArrayUnsafe();
+    } catch (Exception e) {
+      System.err.println("testAttestationRetState error");
+    }
+
     return new byte[0];
+  }
+
+  public static BeaconState testAttestation(BeaconState beaconstate, Attestation attestation) {
+    return new BeaconState();
   }
 
 
